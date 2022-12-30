@@ -1,0 +1,9 @@
+#Access Token and Access Token Secret Aguila apps
+API_KEY  = ""
+API_KEY_SECRET = ""
+
+
+#https://cutt.ly
+API_KEY_CUTT =""
+#https://newsapi.org/
+API_KEY_NEWS =""
