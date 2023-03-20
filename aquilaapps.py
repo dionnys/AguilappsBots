@@ -16,15 +16,27 @@ from Conexion.mongodb_connection import MongoDBConnection
 
 # Carga las variables de entorno
 load_dotenv()
-load_dotenv('.env.access_token')
+
 
 # Variables de configuración
 api_key = os.getenv('api_key')
 api_key_secret = os.getenv('api_key_secret')
-access_key = os.getenv('access_key')
-access_secret = os.getenv('access_secret')
 api_key_news = os.getenv('api_key_news')
 api_key_cutt = os.getenv('api_key_cutt')
+
+
+
+#configuracion
+setting = MongoDBConnection.find_documents('setting')
+
+for configs in setting:
+    id_setting = configs['_id']
+    palabras_violentas = configs['bannedwords']
+    access_key = (configs['token_user']['access_key'])
+    access_secret = (configs['token_user']['access_secret'])
+
+
+
 
 # Instancia de los clientes de las APIs
 apinews = NewsApiClient(api_key=api_key_news)
@@ -38,9 +50,6 @@ api = tweepy.API(auth)
 # Carga del modelo de lenguaje Spacy
 nlp = spacy.load("es_core_news_lg")
 
-# Lista de palabras violentas
-palabras_violentas = ["asesinato", "violencia", "agresión", "crimen", "muerte", "homicidio", "matar"]
-
 
 
 # Funciones de autorización
@@ -52,16 +61,16 @@ def authorization():
     # ask user to verify the PIN generated in broswer
     verifier = input('PIN: ').strip()
     auth.get_access_token(verifier)
+    filter = {"_id": id_setting}
+    update_token = {"$set": {"access_key": auth.access_token, "access_secret": auth.access_token_secret}}
+    MongoDBConnection.update_one('setting', filter, update_token )
 
-    # Save access token and secret to a file
-    with open('.env.access_token', 'w+') as f:
-        f.write(f'ACCESS_KEY = "{auth.access_token}"')
-        f.write('\n')
-        f.write(f'ACCESS_SECRET = "{auth.access_token_secret}"')
 
     # authenticate and retrieve user name
     auth.set_access_token(auth.access_token, auth.access_token_secret)
     user = api.verify_credentials()
+    user_obj = (user._json)
+    MongoDBConnection.insert_one('userinfo', user_obj)
     print(f'Token de cuenta: {user.name} guardado.')
 
 
@@ -123,36 +132,45 @@ def tweet(message):
 
 def get_followers():
 
-    followers = api.get_followers()
-
-    for i in followers:
-        print(i)
-
-def get_non_followers():
-
     followers = api.get_follower_ids()
-    friends = api.get_friend_ids()
 
-    non_followers = [user for user in friends if user not in followers]
+    return followers
 
-    # Divide la lista de usuarios que no siguen en bloques de 100
-    non_followers_chunks = [non_followers[i:i+100] for i in range(0, len(non_followers), 100)]
+def get_following():
 
-    # Busca información completa de usuario para cada bloque de usuarios que no siguen
-    non_followers = []
-    for chunk in non_followers_chunks:
-        user = api.lookup_users(user_id=chunk)
-        non_followers.append(user)
+    following = api.get_friend_ids()
 
-    return non_followers
+    return following
 
-def compare_followers():
+
+def nofollowback():
     followers = set(api.get_follower_ids())
     following = set(api.get_friend_ids())
     nofriends= list(followers - following)
     return nofriends
 
-def get_user_data(user_ids):
+def followback():
+
+    followers = set(api.get_follower_ids())
+    following = set(api.get_friend_ids())
+    friends= followers.intersection(following)
+    return list(friends)
+
+def get_blockedaccounts():
+
+    blockeds = (api.get_blocked_ids())
+
+    return blockeds
+def get_mutedsaccounts():
+
+    blockeds = (api.get_muted_ids())
+
+    return blockeds
+
+
+
+
+def get_user_data(collection, user_ids):
     users = []
     records_inserted = 0
     for i in range(0, len(user_ids), 100):
@@ -176,7 +194,6 @@ def get_user_data(user_ids):
         }
         field = 'iduser'
         value = (user.id)
-        collection = 'nofollowback'
         user_existe = MongoDBConnection.exists_in_field(collection, field, value)
         if  user_existe == False:
             MongoDBConnection.insert_one(collection, user_data)
@@ -206,7 +223,7 @@ def search_news(search_term, lang):
         news, entities_str = process_article(article)
         field = 'title'
         value = (f'{news["title"]}')
-        collection = 'noticias'
+        collection = 'news'
         articulo_existe = MongoDBConnection.exists_in_field(collection, field, value)
         if  articulo_existe == False:
             MongoDBConnection.insert_one(collection, news)
@@ -232,14 +249,13 @@ if __name__ == "__main__":
                 "--authorization",
                 action = 'store_true',
                 required = False,
-                help = "Obtiene los token autorización del usuario.",
+                help = "Obtiene los token autorización del usuario."
                 )
                 parser.add_argument(
-                "-s",
-                "--search_term",
-                default = 'python',
+                "-news",
+                "--postnew",
                 type = str,
-                help = "Bots twitter",
+                help = "Publica noticias en twiter."
                 )
                 parser.add_argument(
                 "-l",
@@ -248,60 +264,99 @@ if __name__ == "__main__":
                 default = 'es',
                 type = str,
                 required = False,
-                help = "Especifica un idioma para la busqueda 'en' (English) o 'es' (Español)",
+                help = "Especifica un idioma para la busqueda 'en' (English) o 'es' (Español)"
                 )
                 parser.add_argument(
-                "-g",
-                "--getuser",
+                "-fs",
+                "--followers",
                 action = 'store_true',
                 required = False,
-                help = "Lista de follower)",
+                help = "Lista de seguidores."
                 )
                 parser.add_argument(
-                "-f",
-                "--friends",
+                "-fw",
+                "--following",
                 action = 'store_true',
                 required = False,
-                help = "Especifica un idioma para la busqueda 'en' (English) o 'es' (Español)",
+                help = "Lista de seguidos."
                 )
                 parser.add_argument(
-                "-c",
-                "--comparefriends",
+                "-ff",
+                "--followback",
                 action = 'store_true',
                 required = False,
-                help = "compara usuarios seguidores vs sequidos",
+                help = "Lista de seguidos de vuelta (Followback)."
+                )
+                parser.add_argument(
+                "-fb",
+                "--nofollowback",
+                action = 'store_true',
+                required = False,
+                help = "Lista de no seguidos de vuelta (Notfollowback)."
+                )
+                parser.add_argument(
+                "-bck",
+                "--blocked",
+                action = 'store_true',
+                required = False,
+                help = "Lista de cuentas bloqueadas."
+                )
+                parser.add_argument(
+                "-m",
+                "--muted",
+                action = 'store_true',
+                required = False,
+                help = "Lista de cuentas silenciadas."
                 )
 
 
                 args = parser.parse_args()
                 auth_user = args.authorization
                 lang = args.language
-                search_term = args.search_term
-                gfollower = args.getuser
-                sfriends = args.friends
-                cfriends = args.comparefriends
-
+                postnews = args.postnew
+                followers = args.followers
+                following = args.following
+                notfollowback = args.nofollowback
+                followbacks = args.followback
+                blockeds = args.blocked
+                muteds = args.muted
 
                 if  auth_user is True :
                         authorization()
-                if  gfollower is True :
-                        get_followers()
-                if  sfriends is True :
-                        usuario ='dionnysbonalde'
-                        #friends(usuario)
-                        non_followers = get_non_followers()
-                        for user in non_followers:
-                           print(user.screen_name)
-                if  cfriends is True :
-                       nofollowback = compare_followers()
-                       user_data = get_user_data(nofollowback)
+                if  postnews:
+                    news = search_news(postnews, lang)
+                    tweet(news)
+                    print(f"Noticia publicada:\n {news}")
 
-                       print(f"Número de registros insertados:: {user_data}")
+                if  followers is True :
+                       followers = get_followers()
+                       user_data = get_user_data('followers', followers)
+                       print(f"Número de registros insertados: {user_data}")
+                if  following is True :
+                       following = get_following()
+                       user_data = get_user_data('following', following)
+                       print(f"Número de registros insertados: {user_data}")
+                if  notfollowback is True :
+                       notfollowback = nofollowback()
+                       user_data = get_user_data('nofollowback', notfollowback)
+                       print(f"Número de registros insertados: {user_data}")
+                if  followbacks :
+                       followbacks = followback()
+                       user_data = get_user_data('followback', followbacks)
+                       print(f"Número de registros insertados: {user_data}")
+                if  blockeds is True :
+                    blocked = get_blockedaccounts()
+                    user_data = get_user_data('blockedaccounts', blocked)
+                    print(f"Número de registros insertados: {user_data}")
+                if  muteds is True :
+                    muted = get_mutedsaccounts()
+                    user_data = get_user_data('mutedaccounts', muted)
+                    print(f"Número de registros insertados: {user_data}")
+
 
                 else:
-                        noticia = search_news(search_term, lang)
-                        print(noticia)
-                        tweet(noticia)
+
+                    print(f'Seleccione uns opción: -h para ayuda')
 
 
 

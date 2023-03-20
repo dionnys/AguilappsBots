@@ -36,6 +36,12 @@ class MongoDBConnection:
         return results
 
     @classmethod
+    def find_one_documents(cls, collection_name, query=None, projection=None):
+        collection = cls.connect()[collection_name]
+        result = collection.find_one(query, projection)
+        return result
+
+    @classmethod
     def exists_in_field(cls, collection_name, field, value):
         collection = cls.connect()[collection_name]
         query = {field: value}

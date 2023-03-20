@@ -2,10 +2,6 @@
 api_key  = ""
 api_key_secret = ""
 
-# access token and access token secret users
-access_key=""
-access_secret=""
-
 #https://cutt.ly
 api_key_cutt =""
 #https://newsapi.org/
