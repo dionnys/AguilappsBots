@@ -1,9 +1,16 @@
-#Access Token and Access Token Secret Aguila apps
-API_KEY  = ""
-API_KEY_SECRET = ""
+# access token and access token secret aguila apps
+api_key  = ""
+api_key_secret = ""
 
+# access token and access token secret users
+access_key=""
+access_secret=""
 
 #https://cutt.ly
-API_KEY_CUTT =""
+api_key_cutt =""
 #https://newsapi.org/
-API_KEY_NEWS =""
+api_key_news =""
+
+# mongodb connection string
+nosql_connect=""
+

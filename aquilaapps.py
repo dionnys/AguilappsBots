@@ -1,61 +1,49 @@
-### See PIN-based authorization for details at
-### https://dev.twitter.com/docs/auth/pin-based-authorization
-
-#https://github.com/mattlisiv/newsapi-python
-#https://pypi.org/project/cuttpy/
-
-
-import tweepy
-import webbrowser
-import os, sys, time
-import random
 import argparse
-import json
+import os
+import random
+import sys
+import webbrowser
 from datetime import datetime
-import logging as log
-from tweepy import OAuthHandler
-from newsapi import NewsApiClient
-from cuttpy import Cuttpy
+
+
 import spacy
-import pymongo
-
-
-
+import tweepy
+import logging as log
+from cuttpy import Cuttpy
 from dotenv import load_dotenv
+from newsapi import NewsApiClient
+from Conexion.mongodb_connection import MongoDBConnection
+
+# Carga las variables de entorno
 load_dotenv()
 load_dotenv('.env.access_token')
 
-API_KEY = os.getenv('API_KEY')
-API_KEY_SECRET = os.getenv('API_KEY_SECRET')
-ACCESS_KEY = os.getenv('ACCESS_KEY')
-ACCESS_SECRET = os.getenv('ACCESS_SECRET')
-API_KEY_NEWS  = os.getenv('API_KEY_NEWS')
-API_KEY_CUTT =os.getenv('API_KEY_CUTT')
+# Variables de configuración
+api_key = os.getenv('api_key')
+api_key_secret = os.getenv('api_key_secret')
+access_key = os.getenv('access_key')
+access_secret = os.getenv('access_secret')
+api_key_news = os.getenv('api_key_news')
+api_key_cutt = os.getenv('api_key_cutt')
 
-apinews = NewsApiClient(api_key=API_KEY_NEWS)
-# define shortener
-cuttly = Cuttpy(API_KEY_CUTT)
+# Instancia de los clientes de las APIs
+apinews = NewsApiClient(api_key=api_key_news)
+cuttly = Cuttpy(api_key_cutt)
 
-
-#Api credentials
-auth = tweepy.OAuth1UserHandler(API_KEY, API_KEY_SECRET,callback="oob")
-auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
+# Configuración de la autenticación de Tweepy
+auth = tweepy.OAuth1UserHandler(api_key, api_key_secret, callback="oob")
+auth.set_access_token(access_key, access_secret)
 api = tweepy.API(auth)
 
-#Modelo neural
+# Carga del modelo de lenguaje Spacy
 nlp = spacy.load("es_core_news_lg")
 
-
+# Lista de palabras violentas
 palabras_violentas = ["asesinato", "violencia", "agresión", "crimen", "muerte", "homicidio", "matar"]
 
-#Conexión de base de datos
-client = pymongo.MongoClient(os.getenv('NOSQL_CONNECT'))
-db = client["aguilapps"]
-collection = db["noticias"]
 
 
-
-
+# Funciones de autorización
 def authorization():
     # get access token from the user and redirect to auth URL
     auth_url = auth.get_authorization_url()
@@ -77,17 +65,11 @@ def authorization():
     print(f'Token de cuenta: {user.name} guardado.')
 
 
-
-
-#############################################################################################################################
-
-
-#Esta función utiliza la API de NewsAPI para buscar
-def get_random_articles(question, lang):
-    data = apinews.get_everything(q=question, language=lang)
+###### Funciones para obtener y procesar noticias
+def get_random_articles(search_term, lang):
+    data = apinews.get_everything(q=search_term, language=lang)
     articles = data["articles"]
     return random.sample(articles, 10)
-
 
 #Esta función toma una lista de artículos y filtra aquellos que contienen palabras violentas en su título o descripción.
 # Devuelve una lista de artículos que no contienen palabras violentas.
@@ -99,6 +81,7 @@ def filter_articles(articles):
         if not titulo_violento and not descripcion_violenta:
             filtered_articles.append(article)
     return filtered_articles
+
 
 
 #sta función toma un artículo y utiliza Spacy para extraer las entidades nombradas (ORG y PERSON) del título y la descripción.
@@ -119,16 +102,7 @@ def process_article(article):
         "date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     }, entities_str
 
-#Esta función inserta el diccionario que contiene la información del artículo en la colección de noticias de MongoDB,
-#siempre y cuando la URL del artículo no esté ya en la base de datos.
 
-def insert_news(news):
-    if collection.count_documents({"url": news["url"]}) == 0:
-        collection.insert_one(news)
-
-# Esta función devuelve True si la URL del artículo no está en la colección de noticias de MongoDB y False en caso contrario.
-def is_news_new(news):
-    return collection.count_documents({"url": news["url"]}) == 0
 
 # Esta función toma un artículo y la cadena que contiene las entidades nombradas,
 # y crea un mensaje que se utilizará para publicar el artículo en Twitter.
@@ -137,31 +111,12 @@ def is_news_new(news):
 def create_message(article, entities_str):
     message = f"{article['title']}. {article['url']}"
     if entities_str:
-        message = f"{message} - Mencionan: {entities_str}"
+        message = f"{message} #{entities_str}"
     return message
 
-#Esta es la función principal que busca noticias relevantes y publica en Twitter.
-# Utiliza las funciones anteriores para buscar artículos aleatorios, filtrarlos, procesarlos y crear un mensaje.
 
-def search_news(question, lang):
-    articles = get_random_articles(question, lang)
-    filtered_articles = filter_articles(articles)
-    for article in filtered_articles:
-        news, entities_str = process_article(article)
-        if is_news_new(news):
-            insert_news(news)
-            message = create_message(article, entities_str)
-            if len(message) > 280:
-                print("La longitud del mensaje supera los 280 caracteres")
-            else:
-                return message
-    return None
-
-
-#############################################################################################################################
-
+###### Funciones de Twitter
 def tweet(message):
-
         user = api.verify_credentials()
         print(f'Se publicó un tweet en cuenta: {user.name}')
         api.update_status(message)
@@ -172,7 +127,6 @@ def get_followers():
 
     for i in followers:
         print(i)
-
 
 def get_non_followers():
 
@@ -192,6 +146,43 @@ def get_non_followers():
 
     return non_followers
 
+def compare_followers():
+    followers = set(api.get_follower_ids())
+    following = set(api.get_friend_ids())
+    nofriends= list(followers - following)
+    return nofriends
+
+def get_user_data(user_ids):
+    users = []
+    records_inserted = 0
+    for i in range(0, len(user_ids), 100):
+        chunk = user_ids[i:i+100]
+        user_data = api.lookup_users(user_id=chunk)
+        users.extend(user_data)
+
+    for user in users:
+        user_data={
+                "iduser":user.id,
+                "urlperfil": f'https://twitter.com/{user.screen_name}' ,
+                "username": user.screen_name,
+                "imagenperfil":user.profile_image_url,
+                "nombre": user.name,
+                "localizacion": user.location,
+                "descripcion": user.description,
+                "cuentacreada":user.created_at,
+                "seguidores": user.followers_count,
+                "Seguidos": user.friends_count,
+                "date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
+        field = 'iduser'
+        value = (user.id)
+        collection = 'nofollowback'
+        user_existe = MongoDBConnection.exists_in_field(collection, field, value)
+        if  user_existe == False:
+            MongoDBConnection.insert_one(collection, user_data)
+            records_inserted += 1
+
+    return records_inserted
 
 
 def friends(usuario):
@@ -203,6 +194,32 @@ def friends(usuario):
     else:
         print("No, @" + usuario + " no te sigue en Twitter.")
 
+
+#Esta es la función principal que busca noticias relevantes y publica en Twitter.
+# Utiliza las funciones anteriores para buscar artículos aleatorios, filtrarlos, procesarlos y crear un mensaje.
+
+def search_news(search_term, lang):
+    articles = get_random_articles(search_term, lang)
+    filtered_articles = filter_articles(articles)
+
+    for article in filtered_articles:
+        news, entities_str = process_article(article)
+        field = 'title'
+        value = (f'{news["title"]}')
+        collection = 'noticias'
+        articulo_existe = MongoDBConnection.exists_in_field(collection, field, value)
+        if  articulo_existe == False:
+            MongoDBConnection.insert_one(collection, news)
+            message = create_message(news, entities_str)
+            if len(message) > 280:
+                print("La longitud del mensaje supera los 280 caracteres")
+            else:
+                return message
+    return None
+
+
+####################
+# Función principal
 
 
 if __name__ == "__main__":
@@ -218,8 +235,8 @@ if __name__ == "__main__":
                 help = "Obtiene los token autorización del usuario.",
                 )
                 parser.add_argument(
-                "-q",
-                "--question",
+                "-s",
+                "--search_term",
                 default = 'python',
                 type = str,
                 help = "Bots twitter",
@@ -247,13 +264,22 @@ if __name__ == "__main__":
                 required = False,
                 help = "Especifica un idioma para la busqueda 'en' (English) o 'es' (Español)",
                 )
+                parser.add_argument(
+                "-c",
+                "--comparefriends",
+                action = 'store_true',
+                required = False,
+                help = "compara usuarios seguidores vs sequidos",
+                )
+
 
                 args = parser.parse_args()
                 auth_user = args.authorization
                 lang = args.language
-                question = args.question
+                search_term = args.search_term
                 gfollower = args.getuser
                 sfriends = args.friends
+                cfriends = args.comparefriends
 
 
                 if  auth_user is True :
@@ -266,10 +292,14 @@ if __name__ == "__main__":
                         non_followers = get_non_followers()
                         for user in non_followers:
                            print(user.screen_name)
+                if  cfriends is True :
+                       nofollowback = compare_followers()
+                       user_data = get_user_data(nofollowback)
+
+                       print(f"Número de registros insertados:: {user_data}")
 
                 else:
-                        result = None
-                        noticia = search_news(question, lang)
+                        noticia = search_news(search_term, lang)
                         print(noticia)
                         tweet(noticia)
 

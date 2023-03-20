@@ -16,6 +16,12 @@ Configure las variables de entorno en un archivo .env siguiendo el formato del a
 Ejecute el script: python bot.py.
 Uso
 
+### See PIN-based authorization for details at
+https://dev.twitter.com/docs/auth/pin-based-authorization
+
+#https://github.com/mattlisiv/newsapi-python
+#https://pypi.org/project/cuttpy/
+
 El script se ejecuta desde la línea de comandos y acepta varios argumentos:
 
 css
