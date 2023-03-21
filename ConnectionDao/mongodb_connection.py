@@ -58,10 +58,21 @@ class MongoDBConnection:
             result = collection.update_one(query, update)
             time.sleep(2)
 
-            print(f"Se actualizó un documento en collection: {collection_name} en  {result.modified_count}")
+            #print(f"Se actualizó un documento en collection: {collection_name} en  {result.modified_count}")
             return result.modified_count
         except pymongo.errors.PyMongoError as e:
             print(f"Error al actualizar el documento: {e}")
+    @classmethod
+    def delete_one(cls, collection_name, query):
+        try:
+            collection = cls.connect()[collection_name]
+            result = collection.delete_one(query)
+            time.sleep(2)
+            #print(f"Se eliminó un documento en collection: {collection_name} en {result.deleted_count}")
+            return result.deleted_count
+        except pymongo.errors.PyMongoError as e:
+            print(f"Error al eliminar el documento: {e}")
+
 
     @classmethod
     def replace_document(cls, collection_name, query, new_document):
@@ -70,7 +81,7 @@ class MongoDBConnection:
             collection = db[collection_name]
             result = collection.replace_one(query, new_document)
             time.sleep(2)
-            print(f"Se reemplazó el documento en collection: {collection_name} con ID: {result.upserted_id}")
+            #print(f"Se reemplazó el documento en collection: {collection_name} con ID: {result.upserted_id}")
             return result.upserted_id is not None
         except pymongo.errors.PyMongoError as e:
             print(f"Error al reemplazar el documento: {e}")

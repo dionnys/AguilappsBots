@@ -1,11 +1,13 @@
 import os
 import sys
 import argparse
+import asyncio
 from datetime import datetime
 from ConnectionDao.mongodb_connection import MongoDBConnection
 from ClassApi.news import News
 from ClassApi.twitter import Twitter
 from ClassApi.openai import OpenAI
+from ClassApi.telegram import TelegramBot
 from ClassLogManager.log_manager import LogManager
 
 # Configuración
@@ -18,6 +20,7 @@ for configs in setting:
     api_key_news = configs['apikeynews']
     api_key_cutt = configs['apikeycutt']
     api_key_openai = configs['apikeyopenai']
+    api_key_telegram = configs['apikeytelegram']['bot_token']
 
 # Creación del objeto News
 news = News(api_key_news, api_key_cutt, banned_words)
@@ -28,31 +31,41 @@ twitter = Twitter(id_setting, access_key, access_secret)
 # Crear instancia de la clase OpenAI y configurar la API key
 openai_instance = OpenAI(api_key_openai)
 
+# Crea una instancia del bot de Telegram
+telegram_bot = TelegramBot(api_key_telegram,openai_instance)
+
+
 
 ####################
 # Función principal
-def main():
-    action_mapping = {
-        'authorization': twitter.get_authorization,
-        'postnew': lambda: twitter.set_tweet(news.search_news(postnews, lang)),
-        'followers': lambda: twitter.get_user_data('followers', twitter.get_followers()),
-        'following': lambda: twitter.get_user_data('following', twitter.get_following()),
-        'nofollowback': lambda: twitter.get_user_data('nofollowback', twitter.nofollowback()),
-        'followback': lambda: twitter.get_user_data('followback', twitter.followback()),
-        'blocked': lambda: twitter.get_user_data('blockedaccounts', twitter.get_blockedaccounts()),
-        'muted': lambda: twitter.get_user_data('mutedaccounts', twitter.get_mutedsaccounts()),
-        'chatgpt': lambda: openai_instance.get_response(input('Ingrese su pregunta: '))
-    }
+async def main():
+        action_mapping = {
+            'authorization': twitter.get_authorization,
+            'postnew': lambda: twitter.set_tweet(news.search_news(postnews, lang)),
+            'followers': lambda: twitter.get_user_data('followers', twitter.get_followers()),
+            'following': lambda: twitter.get_user_data('following', twitter.get_following()),
+            'nofollowback': lambda: twitter.get_user_data('nofollowback', twitter.nofollowback()),
+            'followback': lambda: twitter.get_user_data('followback', twitter.followback()),
+            'blocked': lambda: twitter.get_user_data('blockedaccounts', twitter.get_blockedaccounts()),
+            'muted': lambda: twitter.get_user_data('mutedaccounts', twitter.get_mutedsaccounts()),
+            'chatgpt': lambda: openai_instance.get_response(input('Ingrese su pregunta: ')),
+            'telegrambot': telegram_bot.run
 
-    executed = False
-    for arg, func in action_mapping.items():
-        if getattr(args, arg):
-            result = func()
-            print(f"Resultado de {arg}: {result}")
-            executed = True
+        }
 
-    if not executed:
-        print(f'Seleccione una opción: -h para ayuda')
+        executed = False
+        for arg, func in action_mapping.items():
+            if getattr(args, arg):
+                if arg == "telegrambot":
+                    await func()
+                else:
+                    result = func()
+                    print(f"Resultado de {arg}: {result}")
+                executed = True
+
+
+        if not executed:
+            print(f'Seleccione una opción: -h para ayuda')
 
 
 if __name__ == "__main__":
@@ -132,6 +145,14 @@ if __name__ == "__main__":
                 required = False,
                 help = "Activa ChatGpt."
                 )
+                parser.add_argument(
+                "-t",
+                "--telegrambot",
+                action = 'store_true',
+                required = False,
+                help = "Activa TelegramBot."
+                )
+
 
 
                 args = parser.parse_args()
@@ -145,12 +166,13 @@ if __name__ == "__main__":
                 blockeds = args.blocked
                 muteds = args.muted
                 chatgpt = args.chatgpt
+                telegrambot = args.telegrambot
 
-                main()
 
         except Exception as e:
             LogManager.log("ERROR", f'Error de Ejecucion: {e}')
         finally:
+            asyncio.run(main())
             LogManager.log("INFO", f'FIN - EJECUCION BOTS')
             print('*' * 30, 'FIN - EJECUCION BOTS', '*' * 30)
             sys.exit()
