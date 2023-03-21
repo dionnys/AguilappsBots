@@ -27,8 +27,30 @@ news = News(api_key_news, api_key_cutt, banned_words)
 twitter = Twitter(id_setting, access_key, access_secret)
 
 
+
 ####################
 # Función principal
+def main():
+    action_mapping = {
+        'authorization': twitter.get_authorization,
+        'postnew': lambda: twitter.set_tweet(news.search_news(postnews, lang)),
+        'followers': lambda: twitter.get_user_data('followers', twitter.get_followers()),
+        'following': lambda: twitter.get_user_data('following', twitter.get_following()),
+        'nofollowback': lambda: twitter.get_user_data('nofollowback', twitter.nofollowback()),
+        'followback': lambda: twitter.get_user_data('followback', twitter.followback()),
+        'blocked': lambda: twitter.get_user_data('blockedaccounts', twitter.get_blockedaccounts()),
+        'muted': lambda: twitter.get_user_data('mutedaccounts', twitter.get_mutedsaccounts()),
+    }
+
+    executed = False
+    for arg, func in action_mapping.items():
+        if getattr(args, arg):
+            result = func()
+            print(f"Resultado de {arg}: {result}")
+            executed = True
+
+    if not executed:
+        print(f'Seleccione una opción: -h para ayuda')
 
 
 if __name__ == "__main__":
@@ -114,49 +136,11 @@ if __name__ == "__main__":
                 blockeds = args.blocked
                 muteds = args.muted
 
-                if  auth_user is True :
-                        twitter.get_authorization()
-                if  postnews:
-
-                    newss = news.search_news(postnews, lang)
-                    twitter.set_tweet(newss)
-                    print(f"Noticia publicada:\n {newss}")
-
-                if  followers is True :
-                       followers = twitter.get_followers()
-                       user_data = twitter.get_user_data('followers', followers)
-                       print(f"Número de registros insertados: {user_data}")
-                if  following is True :
-                       following = twitter.get_following()
-                       user_data = twitter.get_user_data('following', following)
-                       print(f"Número de registros insertados: {user_data}")
-                if  notfollowback is True :
-                       notfollowback = twitter.nofollowback()
-                       user_data = twitter.get_user_data('nofollowback', notfollowback)
-                       print(f"Número de registros insertados: {user_data}")
-                if  followbacks :
-                       followbacks = twitter.followback()
-                       user_data = twitter.get_user_data('followback', followbacks)
-                       print(f"Número de registros insertados: {user_data}")
-                if  blockeds is True :
-                    blocked = twitter.get_blockedaccounts()
-                    user_data = twitter.get_user_data('blockedaccounts', blocked)
-                    print(f"Número de registros insertados: {user_data}")
-                if  muteds is True :
-                    muted = twitter.get_mutedsaccounts()
-                    user_data = twitter.get_user_data('mutedaccounts', muted)
-                    print(f"Número de registros insertados: {user_data}")
-
-
-                else:
-
-                    print(f'Seleccione uns opción: -h para ayuda')
-
-
+                main()
 
         except Exception as e:
-                LogManager.log("ERROR", f'Error de Ejecucion: {e}')
+            LogManager.log("ERROR", f'Error de Ejecucion: {e}')
         finally:
-                LogManager.log("INFO", f'FIN - EJECUCION BOTS')
-                print('*' * 30, 'FIN - EJECUCION BOTS', '*' * 30)
-                sys.exit()
+            LogManager.log("INFO", f'FIN - EJECUCION BOTS')
+            print('*' * 30, 'FIN - EJECUCION BOTS', '*' * 30)
+            sys.exit()
