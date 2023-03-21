@@ -35,7 +35,7 @@ class Twitter:
         verifier = input('PIN: ').strip()
         self.auth.get_access_token(verifier)
         filter = {"_id": self.id_setting}
-        update_token = {"$set": {"access_key": self.auth.access_token, "access_secret": self.auth.access_token_secret}}
+        update_token = {"$set": {"token_user_twitter": {"access_key": self.auth.access_token, "access_secret": self.auth.access_token_secret}}}
         MongoDBConnection.update_one('setting', filter, update_token )
 
         # authenticate and retrieve user name

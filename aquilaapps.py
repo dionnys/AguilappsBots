@@ -1,4 +1,3 @@
-
 import os
 import sys
 import argparse
@@ -6,19 +5,19 @@ from datetime import datetime
 from ConnectionDao.mongodb_connection import MongoDBConnection
 from ClassApi.news import News
 from ClassApi.twitter import Twitter
+from ClassApi.openai import OpenAI
 from ClassLogManager.log_manager import LogManager
 
-
-#configuracion
+# Configuración
 setting = MongoDBConnection.find_documents('setting')
-
 for configs in setting:
     id_setting = configs['_id']
     banned_words = configs['bannedwords']
-    access_key = (configs['token_user']['access_key'])
-    access_secret = (configs['token_user']['access_secret'])
-    api_key_news = (configs['apikeynews'])
-    api_key_cutt = (configs['apikeycutt'])
+    access_key = configs['token_user_twitter']['access_key']
+    access_secret = configs['token_user_twitter']['access_secret']
+    api_key_news = configs['apikeynews']
+    api_key_cutt = configs['apikeycutt']
+    api_key_openai = configs['apikeyopenai']
 
 # Creación del objeto News
 news = News(api_key_news, api_key_cutt, banned_words)
@@ -26,6 +25,8 @@ news = News(api_key_news, api_key_cutt, banned_words)
 # Creación del objeto Twitter
 twitter = Twitter(id_setting, access_key, access_secret)
 
+# Crear instancia de la clase OpenAI y configurar la API key
+openai_instance = OpenAI(api_key_openai)
 
 
 ####################
@@ -40,6 +41,7 @@ def main():
         'followback': lambda: twitter.get_user_data('followback', twitter.followback()),
         'blocked': lambda: twitter.get_user_data('blockedaccounts', twitter.get_blockedaccounts()),
         'muted': lambda: twitter.get_user_data('mutedaccounts', twitter.get_mutedsaccounts()),
+        'chatgpt': lambda: openai_instance.get_response(input('Ingrese su pregunta: '))
     }
 
     executed = False
@@ -123,6 +125,13 @@ if __name__ == "__main__":
                 required = False,
                 help = "Lista de cuentas silenciadas."
                 )
+                parser.add_argument(
+                "-o",
+                "--chatgpt",
+                action = 'store_true',
+                required = False,
+                help = "Activa ChatGpt."
+                )
 
 
                 args = parser.parse_args()
@@ -135,6 +144,7 @@ if __name__ == "__main__":
                 followbacks = args.followback
                 blockeds = args.blocked
                 muteds = args.muted
+                chatgpt = args.chatgpt
 
                 main()
 
