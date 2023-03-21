@@ -1,5 +1,6 @@
 import os
 import pymongo
+import time
 from pymongo import MongoClient
 from datetime import datetime
 from dotenv import load_dotenv
@@ -21,7 +22,6 @@ class MongoDBConnection:
                 db.create_collection(collection_name)
             collection = db[collection_name]
             result = collection.insert_one(document)
-            #print(f"Se insertó el documento con ID: {result.inserted_id}")
             return result.inserted_id
         except pymongo.errors.PyMongoError as e:
             print(f"Error al insertar el documento: {e}")
@@ -31,6 +31,7 @@ class MongoDBConnection:
         collection = cls.connect()[collection_name]
         cursor = collection.find(query, projection).limit(limit)
         results = []
+        time.sleep(2)
         for document in cursor:
             results.append(document)
         return results
@@ -42,9 +43,8 @@ class MongoDBConnection:
         return result
 
     @classmethod
-    def exists_in_field(cls, collection_name, field, value):
+    def exists_in_field(cls, collection_name, query=None):
         collection = cls.connect()[collection_name]
-        query = {field: value}
         result = collection.find_one(query)
         if result:
             return True
@@ -56,7 +56,21 @@ class MongoDBConnection:
         try:
             collection = cls.connect()[collection_name]
             result = collection.update_one(query, update)
-            #print(f"Se actualizaron {result.modified_count} documentos.")
+            time.sleep(2)
+
+            print(f"Se actualizó un documento en collection: {collection_name} en  {result.modified_count}")
             return result.modified_count
         except pymongo.errors.PyMongoError as e:
             print(f"Error al actualizar el documento: {e}")
+
+    @classmethod
+    def replace_document(cls, collection_name, query, new_document):
+        try:
+            db = collection = cls.connect()[collection_name]
+            collection = db[collection_name]
+            result = collection.replace_one(query, new_document)
+            time.sleep(2)
+            print(f"Se reemplazó el documento en collection: {collection_name} con ID: {result.upserted_id}")
+            return result.upserted_id is not None
+        except pymongo.errors.PyMongoError as e:
+            print(f"Error al reemplazar el documento: {e}")
