@@ -16,6 +16,7 @@ setting = MongoDBConnection.find_documents('setting')
 for configs in setting:
     id_setting = configs['_id']
     banned_words = configs['bannedwords']
+    spacy_model_default = configs['spacy_model']['medium']
     access_key = configs['token_user_twitter']['access_key']
     access_secret = configs['token_user_twitter']['access_secret']
     api_key_news = configs['apikeynews']
@@ -37,7 +38,7 @@ twitter = Twitter(id_setting, access_key, access_secret)
 openai_instance = OpenAI(api_key_openai)
 
 # Crea una instancia del bot de Telegram
-telegram_bot = TelegramBot(api_key_telegram, openai_instance)
+telegram_bot = TelegramBot(api_key_telegram, openai_instance, spacy_model_default)
 
 
 
