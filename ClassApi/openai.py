@@ -5,6 +5,7 @@ from ConnectionDao.mongodb_connection import MongoDBConnection
 openai_setting = MongoDBConnection.find_documents('setting')
 for configs in openai_setting:
     engine  = configs['openai_setting']['engine']
+    name = configs['openai_setting']['name']
     temperature = configs['openai_setting']['temperature']
     max_tokens = configs['openai_setting']['max_tokens']
     stop = configs['openai_setting']['stop']
@@ -15,6 +16,7 @@ for configs in openai_setting:
 class OpenAI:
     def __init__(self, api_key):
         self.api_key = api_key
+        self.name = name
         self.engine = engine
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -27,7 +29,7 @@ class OpenAI:
     def get_response(self, question):
         response = openai.Completion.create(
             engine=self.engine,
-            prompt=f"User: {question}\nChatbot:",
+            prompt=f"User: {question}\n{self.name}:",
             temperature=self.temperature,
             max_tokens=self.max_tokens,
             top_p=self.top_p,

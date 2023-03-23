@@ -8,6 +8,7 @@ from ClassApi.news import News
 from ClassApi.twitter import Twitter
 from ClassApi.openai import OpenAI
 from ClassApi.telegram import TelegramBot
+from ClassApi.google import GoogleSearcher
 from ClassLogManager.log_manager import LogManager
 
 # Configuración
@@ -21,7 +22,11 @@ for configs in setting:
     api_key_cutt = configs['apikeycutt']
     api_key_openai = configs['apikeyopenai']
     api_key_telegram = configs['apikeytelegram']['bot_token']
+    api_key_google = configs['apikeygooglesearch']['api_key']
+    api_cx_google = configs['apikeygooglesearch']['cx']
 
+# Crea una instancia del bot de Telegram
+google_instance = GoogleSearcher(api_key_google, api_cx_google)
 # Creación del objeto News
 news = News(api_key_news, api_key_cutt, banned_words)
 
@@ -32,7 +37,12 @@ twitter = Twitter(id_setting, access_key, access_secret)
 openai_instance = OpenAI(api_key_openai)
 
 # Crea una instancia del bot de Telegram
-telegram_bot = TelegramBot(api_key_telegram,openai_instance)
+telegram_bot = TelegramBot(api_key_telegram, openai_instance)
+
+
+
+
+
 
 
 
