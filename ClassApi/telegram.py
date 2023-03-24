@@ -202,8 +202,7 @@ class TelegramBot:
         self.chatgpt_active_users.pop(user_id, None)
         await self.typing_indicator(user_id)
         farewell_message = "*ChatGPT* se ha desactivado. Si necesitas ayuda en el futuro, no dudes en activarme nuevamente escribiendo /hola. ¡Hasta la próxima! 😊"
-        await message.answer(farewell_message, parse_mode="Markdown")
-        return farewell_message
+        return await message.answer(farewell_message, parse_mode="Markdown")
 
     async def typing_indicator(self, user_id):
         await self.bot.send_chat_action(chat_id=user_id, action=types.ChatActions.TYPING)
