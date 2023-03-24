@@ -10,8 +10,9 @@ import spacy
 from spacy.util import minibatch, compounding
 from datetime import datetime
 from ClassApi.openai import OpenAI
+from aiogram.utils import executor
 from aiogram import Bot, Dispatcher, types
-from Tools.download import Downloader
+from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from ConnectionDao.mongodb_connection import MongoDBConnection
 
 
@@ -22,6 +23,7 @@ class TelegramBot:
         self.token = token
         self.bot = Bot(token=self.token)
         self.dp = Dispatcher(self.bot)
+        self.dp.middleware.setup(LoggingMiddleware())
         self.chatgpt_active_users = {}
         self.downloader = Downloader() ### por activar
         self.user_conversations = {}
@@ -71,6 +73,8 @@ class TelegramBot:
                 "user_id": user_id,
                 "chatgpt_active": False,
                 "spacy_model": self.spacy_model_name_default,
+                "banned_gpt": False,
+                "banned_chat": False,
                 "user_name": user_first_name,
                 "user_last_name": user_last_name,
                 "user_username": user_username,
@@ -99,18 +103,19 @@ class TelegramBot:
                 response = command_function(user_id, message)
 
         elif user_id in self.chatgpt_active_users:
-            print('ChatGPT activo', user_id)
+            #print('ChatGPT activo', user_id)
             # Enviar acción de chat "escribiendo"
             await self.typing_indicator(user_id)
             # Obtener respuesta de OpenAI
             response = self.openai_instance.get_response(conversation_history)
         else:
-            print('ChatGPT desactivado.', user_id)
+            #print('ChatGPT desactivado.', user_id)
+
             await self.typing_indicator(user_id)
             # Process message with spaCy
             user_document = self.db_connection.find_one_documents("users", {"user_id": user_id})
             user_spacy_model = user_document.get("spacy_model", self.spacy_model_name_default) if user_document is not None else self.spacy_model_name_default
-            print("user_spacy_model:", user_spacy_model)
+            #####
             nlp = spacy.load(user_spacy_model)
             doc = nlp(received_text)
             entities = [ent.text for ent in doc.ents]
@@ -138,7 +143,8 @@ class TelegramBot:
                 response = f"¿Podrías decirme más acerca de la relación entre las ideas que unen {', '.join(conjunctions)}?"
             else:
                 await self.typing_indicator(user_id)
-                response = welcome_message
+                additional_question = "¿Puedes darme más detalles sobre tu pregunta?"
+                response = additional_question
 
 
 
@@ -170,8 +176,12 @@ class TelegramBot:
             await self.typing_indicator(user_id)
             status_message = "¡Genial! ChatGPT está listo y activado para ayudarte. No dudes en hacerme cualquier pregunta, estoy aquí para asistirte. 😊"
             return status_message
+        elif user and user.get("banned_gpt"):
+            await self.typing_indicator(user_id)
+            banned_message = "Lo siento, no puedo activar ChatGPT para ti porque tu acceso ha sido restringido. Por favor, ponte en contacto con el administrador si crees que esto es un error."
+            return banned_message
         else:
-            # Si el usuario no esta activo actualizar el campo  ¿chatgpt_active.
+            # Si el usuario no está activo y no está baneado, actualizar el campo chatgpt_active.
             user_data = {"chatgpt_active": True}
             self.db_connection.update_one("users", {"user_id": user_id}, {"$set": user_data})
             self.chatgpt_active_users[user_id] = True
@@ -181,7 +191,6 @@ class TelegramBot:
             user_first_name = message.from_user.first_name
             activate_message = f"¡Hola {user_first_name}! Soy ChatGPT, tu amigable asistente. Estoy aquí para ayudarte con tus preguntas. Por favor, adelante, pregúntame cualquier cosa y estaré encantado de responder. Cuando quieras despedirte, simplemente escribe /chao."
             return activate_message
-
 
     async def deactivate_chatgpt(self, user_id, message):
         # Cambiar el estado de activación del chat a False para el usuario en la base de datos
@@ -193,6 +202,7 @@ class TelegramBot:
 
     async def typing_indicator(self, user_id):
         await self.bot.send_chat_action(chat_id=user_id, action=types.ChatActions.TYPING)
+
 
     async def start(self, message: types.Message):
         # Obtener el primer nombre del usuario del objeto de mensaje
