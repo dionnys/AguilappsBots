@@ -108,6 +108,7 @@ class TelegramBot:
             # Obtener respuesta de OpenAI
             response = self.openai_instance.get_response(conversation_history)
         else:
+            
             #print('ChatGPT desactivado.', user_id)
 
             await self.typing_indicator(user_id)
@@ -141,9 +142,12 @@ class TelegramBot:
             elif conjunctions:
                 response = f"¿Podrías decirme más acerca de la relación entre las ideas que unen {', '.join(conjunctions)}?"
             else:
-                await self.typing_indicator(user_id)
-                additional_question = "¿Puedes darme más detalles sobre tu pregunta?"
-                response = additional_question
+                if received_text == "/start":
+                    await self.start(message)
+                else:
+                    await self.typing_indicator(user_id)
+                    additional_question = "¿Puedes darme más detalles sobre tu pregunta?"
+                    response = additional_question
 
 
 
