@@ -110,7 +110,6 @@ class TelegramBot:
             # Obtener respuesta de OpenAI
             response = self.openai_instance.get_response(conversation_history)
         else:
-            
             #print('ChatGPT desactivado.', user_id)
 
             await self.typing_indicator(user_id)
@@ -118,6 +117,7 @@ class TelegramBot:
             user_document = self.db_connection.find_one_documents("users", {"user_id": user_id})
             user_spacy_model = user_document.get("spacy_model", self.spacy_model_name_default) if user_document is not None else self.spacy_model_name_default
             #####
+            spacy.prefer_gpu()
             nlp = spacy.load(user_spacy_model)
             doc = nlp(received_text)
             entities = [ent.text for ent in doc.ents]
