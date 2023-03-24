@@ -12,6 +12,7 @@ from datetime import datetime
 from ClassApi.openai import OpenAI
 from aiogram.utils import executor
 from aiogram import Bot, Dispatcher, types
+from Tools.managers_tasks import TaskHandler
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from ConnectionDao.mongodb_connection import MongoDBConnection
 
@@ -31,6 +32,7 @@ class TelegramBot:
         self.dp.register_message_handler(self.handle_echo)
         # Crear instancia de la clase OpenAI y configurar la API key
         self.openai_instance = openai_api_key
+
 
     async def handle_echo(self, message: types.Message):
         user_id = message.from_user.id
@@ -145,6 +147,9 @@ class TelegramBot:
                 if received_text == "/start":
                     await self.typing_indicator(user_id)
                     response = welcome_message
+                if received_text == "/task":
+                    await self.typing_indicator(user_id)
+                    response = f"📝 ¡Próximamente! Estamos trabajando en la programación de tareas para que puedas ser más productivo/a. ¡Mantente atento/a!"
                 else:
                     await self.typing_indicator(user_id)
                     additional_question = "¿Puedes darme más detalles sobre tu pregunta?"
@@ -201,7 +206,7 @@ class TelegramBot:
         self.db_connection.update_one("users", {"user_id": user_id}, {"$set": {"chatgpt_active": False}})
         self.chatgpt_active_users.pop(user_id, None)
         await self.typing_indicator(user_id)
-        farewell_message = "ChatGPT se ha desactivado. Si necesitas ayuda en el futuro, no dudes en activarme nuevamente escribiendo /hola. ¡Hasta la próxima! 😊"
+        farewell_message = "¡Gracias por usar mis servicios! Espero haber sido de ayuda. Si necesitas asistencia en el futuro, no dudes en activarme de nuevo. ¡Que tengas un excelente día! 😊"
         return farewell_message
 
     async def typing_indicator(self, user_id):
