@@ -38,7 +38,7 @@ class TelegramBot:
         user_first_name = message.from_user.first_name
         user_last_name = message.from_user.last_name
         user_username = message.from_user.username
-        welcome_message = (f"¡Hola, {user_first_name}! Estoy aquí para ayudarte. 😊 Si deseas activar ChatGPT, simplemente escribe /hola. ¡Espero poder asistirte!")
+        welcome_message = (f"¡Hola, {user_first_name}! Estoy aquí para ayudarte. 😊 Si deseas activar **ChatGPT**, simplemente escribe /hola. ¡Espero poder asistirte!")
 
 
         # Create an instance of the MongoDBConnection class
@@ -143,7 +143,8 @@ class TelegramBot:
                 response = f"¿Podrías decirme más acerca de la relación entre las ideas que unen {', '.join(conjunctions)}?"
             else:
                 if received_text == "/start":
-                    await self.start(message)
+                    await self.typing_indicator(user_id)
+                    response = welcome_message
                 else:
                     await self.typing_indicator(user_id)
                     additional_question = "¿Puedes darme más detalles sobre tu pregunta?"
@@ -177,11 +178,11 @@ class TelegramBot:
         user = self.db_connection.find_one_documents("users", {"user_id": user_id})
         if user and user.get("chatgpt_active"):
             await self.typing_indicator(user_id)
-            status_message = "¡Genial! ChatGPT está listo y activado para ayudarte. No dudes en hacerme cualquier pregunta, estoy aquí para asistirte. 😊"
+            status_message = "¡Genial! **ChatGPT** está listo y activado para ayudarte. No dudes en hacerme cualquier pregunta, estoy aquí para asistirte. 😊"
             return status_message
         elif user and user.get("banned_gpt"):
             await self.typing_indicator(user_id)
-            banned_message = "Lo siento, no puedo activar ChatGPT para ti porque tu acceso ha sido restringido. Por favor, ponte en contacto con el administrador si crees que esto es un error."
+            banned_message = "Lo siento, no puedo activar **ChatGPT** para ti porque tu acceso ha sido restringido. Por favor, ponte en contacto con el administrador si crees que esto es un error."
             return banned_message
         else:
             # Si el usuario no está activo y no está baneado, actualizar el campo chatgpt_active.
@@ -192,7 +193,7 @@ class TelegramBot:
             # Mensaje de saludo del chatGPT
             await self.typing_indicator(user_id)
             user_first_name = message.from_user.first_name
-            activate_message = f"¡Hola {user_first_name}! Soy ChatGPT, tu amigable asistente. Estoy aquí para ayudarte con tus preguntas. Por favor, adelante, pregúntame cualquier cosa y estaré encantado de responder. Cuando quieras despedirte, simplemente escribe /chao."
+            activate_message = f"¡Hola {user_first_name}! Soy **ChatGPT**, tu amigable asistente. Estoy aquí para ayudarte con tus preguntas. Por favor, adelante, pregúntame cualquier cosa y estaré encantado de responder. Cuando quieras despedirte, simplemente escribe /chao."
             return activate_message
 
     async def deactivate_chatgpt(self, user_id, message):
@@ -200,7 +201,7 @@ class TelegramBot:
         self.db_connection.update_one("users", {"user_id": user_id}, {"$set": {"chatgpt_active": False}})
         self.chatgpt_active_users.pop(user_id, None)
         await self.typing_indicator(user_id)
-        farewell_message = "ChatGPT se ha desactivado. Si necesitas ayuda en el futuro, no dudes en activarme nuevamente escribiendo /hola. ¡Hasta la próxima! 😊"
+        farewell_message = "**ChatGPT** se ha desactivado. Si necesitas ayuda en el futuro, no dudes en activarme nuevamente escribiendo /hola. ¡Hasta la próxima! 😊"
         return farewell_message
 
     async def typing_indicator(self, user_id):
@@ -212,7 +213,7 @@ class TelegramBot:
         user_first_name = message.from_user.first_name
 
         # Construir el mensaje de bienvenida con el nombre del usuario
-        welcome_message = f"¡Hola! {user_first_name} Soy un bot de Telegram equipado con ChatGPT y spaCy, un asistente inteligente basado en inteligencia artificial. Para activar ChatGPT, escribe /hola. Si deseas salir, simplemente escribe /chao."
+        welcome_message = f"¡Hola! {user_first_name} Soy un bot de Telegram equipado con **ChatGPT** y **spaCy**, un asistente inteligente basado en inteligencia artificial. Para activar **ChatGPT**, escribe /hola. Si deseas salir, simplemente escribe /chao."
 
         # Enviar el mensaje de bienvenida al usuario
         await message.answer(welcome_message)
