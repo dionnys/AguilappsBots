@@ -25,7 +25,6 @@ class TelegramBot:
         self.dp = Dispatcher(self.bot)
         self.dp.middleware.setup(LoggingMiddleware())
         self.chatgpt_active_users = {}
-        self.downloader = Downloader() ### por activar
         self.user_conversations = {}
         self.spacy_model_name_default = spacy_model_default
         logging.basicConfig(level=logging.INFO)
