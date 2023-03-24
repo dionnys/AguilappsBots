@@ -78,42 +78,53 @@ class TelegramBot:
             # Obtener respuesta de OpenAI
             response = self.openai_instance.get_response(conversation_history)
         else:
+            await self.bot.send_chat_action(chat_id=user_id, action=types.ChatActions.TYPING)
             print('ChatGPT desactivado.', user_id)
             # Process message with spaCy
             user_document = self.db_connection.find_one_documents("users", {"user_id": user_id})
             user_spacy_model = user_document.get("spacy_model", self.spacy_model_name_default) if user_document is not None else self.spacy_model_name_default
             print("user_spacy_model:", user_spacy_model)
-            nlp = spacy.load(user_spacy_model)
-            doc = nlp(received_text)
-            entities = [ent.text for ent in doc.ents]
-            nouns = [token.text for token in doc if token.pos_ == "NOUN"]
-            adjectives = [token.text for token in doc if token.pos_ == "ADJ"]
-            verbs = [token.text for token in doc if token.pos_ == "VERB"]
-            adverbs = [token.text for token in doc if token.pos_ == "ADV"]
-            pronouns = [token.text for token in doc if token.pos_ == "PRON"]
-            prepositions = [token.text for token in doc if token.pos_ == "ADP"]
-            conjunctions = [token.text for token in doc if token.pos_ == "CCONJ" or token.pos_ == "SCONJ"]
-            # Generate response based on spaCy analysis
-            if entities:
-                response = f"Veo que mencionaste {', '.join(entities)}. ¿Me puedes contar más sobre eso?"
-            elif nouns and adjectives and verbs:
-                response = f"Háblame más sobre {', '.join(adjectives)} {nouns[0]} y por qué {verbs[0]} es importante."
-            elif nouns and adjectives:
-                response = f"Háblame más sobre {', '.join(adjectives)} {nouns[0]}."
-            elif adverbs:
-                response = f"Me parece interesante lo que me dices. ¿Puedes ser más específico con respecto a {', '.join(adverbs)}?"
-            elif pronouns:
-                response = f"¿Puedes aclararme a quién te refieres con {', '.join(pronouns)}?"
-            elif prepositions:
-                response = f"¿Puedes darme más detalles acerca de {', '.join(prepositions)}?"
-            elif conjunctions:
-                response = f"¿Podrías decirme más acerca de la relación entre las ideas que unen {', '.join(conjunctions)}?"
+
+            user_document = self.db_connection.find_one_documents("users", {"user_id": user_id})
+            if user_document:
+                user_spacy_model = user_document.get("spacy_model", self.spacy_model_name_default)
             else:
-                response = welcome_message
+                user_spacy_model = self.spacy_model_name_default
+                print("user_spacy_model:", user_spacy_model)
+ 
+                nlp = spacy.load(user_spacy_model)
+                doc = nlp(received_text)
+                entities = [ent.text for ent in doc.ents]
+                nouns = [token.text for token in doc if token.pos_ == "NOUN"]
+                adjectives = [token.text for token in doc if token.pos_ == "ADJ"]
+                verbs = [token.text for token in doc if token.pos_ == "VERB"]
+                adverbs = [token.text for token in doc if token.pos_ == "ADV"]
+                pronouns = [token.text for token in doc if token.pos_ == "PRON"]
+                prepositions = [token.text for token in doc if token.pos_ == "ADP"]
+                conjunctions = [token.text for token in doc if token.pos_ == "CCONJ" or token.pos_ == "SCONJ"]
+                # Generate response based on spaCy analysis
+                if entities:
+                    response = f"Veo que mencionaste {', '.join(entities)}. ¿Me puedes contar más sobre eso?"
+                elif nouns and adjectives and verbs:
+                    response = f"Háblame más sobre {', '.join(adjectives)} {nouns[0]} y por qué {verbs[0]} es importante."
+                elif nouns and adjectives:
+                    response = f"Háblame más sobre {', '.join(adjectives)} {nouns[0]}."
+                elif adverbs:
+                    response = f"Me parece interesante lo que me dices. ¿Puedes ser más específico con respecto a {', '.join(adverbs)}?"
+                elif pronouns:
+                    response = f"¿Puedes aclararme a quién te refieres con {', '.join(pronouns)}?"
+                elif prepositions:
+                    response = f"¿Puedes darme más detalles acerca de {', '.join(prepositions)}?"
+                elif conjunctions:
+                    response = f"¿Podrías decirme más acerca de la relación entre las ideas que unen {', '.join(conjunctions)}?"
+                else:
+                    await self.bot.send_chat_action(chat_id=user_id, action=types.ChatActions.TYPING)
+                    response = welcome_message
 
 
 
-
+        user_document = self.db_connection.find_one_documents("users", {"user_id": user_id})
+        user_spacy_model = user_document.get("spacy_model", self.spacy_model_name_default) if user_document is not None else self.spacy_model_name_default
         # Save the conversation in MongoDB
         #if user_id in self.chatgpt_active_users is not None:
         conversation = {
