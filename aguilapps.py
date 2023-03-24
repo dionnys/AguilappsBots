@@ -16,7 +16,7 @@ setting = MongoDBConnection.find_documents('setting')
 for configs in setting:
     id_setting = configs['_id']
     banned_words = configs['bannedwords']
-    spacy_model_default = configs['spacy_model']['medium']
+    spacy_model_default = configs['spacy_model']['large']
     access_key = configs['token_user_twitter']['access_key']
     access_secret = configs['token_user_twitter']['access_secret']
     api_key_news = configs['apikeynews']
