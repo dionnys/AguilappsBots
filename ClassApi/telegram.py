@@ -179,13 +179,11 @@ class TelegramBot:
         if user and user.get("chatgpt_active"):
             await self.typing_indicator(user_id)
             status_message = "¡Genial! *ChatGPT* está listo y activado para ayudarte. No dudes en hacerme cualquier pregunta, estoy aquí para asistirte. 😊"
-            await message.answer(status_message, parse_mode="Markdown")
-            return status_message
+            return await message.answer(status_message, parse_mode="Markdown")
         elif user and user.get("banned_gpt"):
             await self.typing_indicator(user_id)
             banned_message = "Lo siento, no puedo activar *ChatGPT* para ti porque tu acceso ha sido restringido. Por favor, ponte en contacto con el administrador si crees que esto es un error."
-            await message.answer(banned_message, parse_mode="Markdown")
-            return banned_message
+            return await message.answer(banned_message, parse_mode="Markdown")
         else:
             # Si el usuario no está activo y no está baneado, actualizar el campo chatgpt_active.
             user_data = {"chatgpt_active": True}
@@ -196,8 +194,7 @@ class TelegramBot:
             await self.typing_indicator(user_id)
             user_first_name = message.from_user.first_name
             activate_message = f"¡Hola {user_first_name}! Soy *ChatGPT*, tu amigable asistente. Estoy aquí para ayudarte con tus preguntas. Por favor, adelante, pregúntame cualquier cosa y estaré encantado de responder. Cuando quieras despedirte, simplemente escribe /chao."
-            await message.answer(activate_message, parse_mode="Markdown")
-            return activate_message
+            return await message.answer(activate_message, parse_mode="Markdown")
 
     async def deactivate_chatgpt(self, user_id, message):
         # Cambiar el estado de activación del chat a False para el usuario en la base de datos
