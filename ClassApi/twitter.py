@@ -25,34 +25,47 @@ class Twitter:
             self.id_setting = id_setting
 
     def get_authorization(self):
-        # get access token from the user and redirect to auth URL
+        result = False
+        try:
+            # get access token from the user and redirect to auth URL
+            auth_url = self.auth.get_authorization_url()
+            LogManager.log("INFO", f'Authorization URL: {auth_url}')
+            print(f'Authorization URL: {auth_url}')
+            webbrowser.open(auth_url)
+            # ask user to verify the PIN generated in broswer
+            verifier = input('PIN: ').strip()
+            self.auth.get_access_token(verifier)
+            filter = {"_id": self.id_setting}
+            update_token = {"$set": {"token_user_twitter": {"access_key": self.auth.access_token, "access_secret": self.auth.access_token_secret}}}
+            MongoDBConnection.update_one('setting', filter, update_token )
 
-        auth_url = self.auth.get_authorization_url()
-        LogManager.log("INFO", f'Authorization URL: {auth_url}')
-        print(f'Authorization URL: {auth_url}')
-        webbrowser.open(auth_url)
-        # ask user to verify the PIN generated in broswer
-        verifier = input('PIN: ').strip()
-        self.auth.get_access_token(verifier)
-        filter = {"_id": self.id_setting}
-        update_token = {"$set": {"token_user_twitter": {"access_key": self.auth.access_token, "access_secret": self.auth.access_token_secret}}}
-        MongoDBConnection.update_one('setting', filter, update_token )
-
-        # authenticate and retrieve user name
-        self.auth.set_access_token(self.auth.access_token, self.auth.access_token_secret)
-        user = self.api.verify_credentials()
-        user_obj = (user._json)
-        MongoDBConnection.insert_one('userinfo', user_obj)
-        LogManager.log("INFO", f'Token de cuenta: {user.name} guardado.')
+            # authenticate and retrieve user name
+            self.auth.set_access_token(self.auth.access_token, self.auth.access_token_secret)
+            user = self.api.verify_credentials()
+            user_obj = (user._json)
+            MongoDBConnection.insert_one('userinfo', user_obj)
+            LogManager.log("INFO", f'Token de cuenta: {user.name} guardado.')
+            result = True
+        except Exception as e:
+                LogManager.log("ERROR", f'Ocurrió un error al obtener el token de acceso: {e}')
+                print(f'Ocurrió un error al obtener el token de acceso: {e}')
+        return result
 
 
 
     def set_tweet(self, message):
-        user = self.api.verify_credentials()
-        LogManager.log("INFO", f'Se publicó un tweet en cuenta: {user.name}')
+        result = False
+        try:
+            user = self.api.verify_credentials()
+            LogManager.log("INFO", f'Se publicó un tweet en cuenta: {user.name}')
+            self.api.update_status(message)
+            result = True
+        except Exception as e:
+            LogManager.log("ERROR", f'Ocurrió un error al publicar el tweet: {e}')
+            print(f'Ocurrió un error al publicar el tweet: {e}')
+            result = False
+        return result
 
-        print(f'Se publicó un tweet en cuenta: {user.name}')
-        self.api.update_status(message)
 
     def get_followers(self):
         followers = self.api.get_follower_ids()

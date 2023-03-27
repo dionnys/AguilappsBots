@@ -2,6 +2,7 @@ import os
 import sys
 import argparse
 import asyncio
+import typer
 from datetime import datetime
 from ConnectionDao.mongodb_connection import MongoDBConnection
 from ClassApi.news import News
@@ -26,7 +27,7 @@ for configs in setting:
     api_key_google = configs['apikeygooglesearch']['api_key']
     api_cx_google = configs['apikeygooglesearch']['cx']
 
-# Crea una instancia del bot de Telegram
+# Crea una instancia del google
 google_instance = GoogleSearcher(api_key_google, api_cx_google)
 # Creación del objeto News
 news = News(api_key_news, api_key_cutt, banned_words)
@@ -40,14 +41,6 @@ openai_instance = OpenAI(api_key_openai)
 # Crea una instancia del bot de Telegram
 telegram_bot = TelegramBot(api_key_telegram, openai_instance, spacy_model_default)
 
-
-
-
-
-
-
-
-####################
 # Función principal
 async def main():
         action_mapping = {
@@ -66,14 +59,13 @@ async def main():
 
         executed = False
         for arg, func in action_mapping.items():
-            if getattr(args, arg):
+            if getattr(parser.parse_args(), arg):
                 if arg == "telegrambot":
                     await func()
                 else:
                     result = func()
                     print(f"Resultado de {arg}: {result}")
                 executed = True
-
 
         if not executed:
             print(f'Seleccione una opción: -h para ayuda')

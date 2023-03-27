@@ -25,16 +25,34 @@ class OpenAI:
         self.frequency_penalty = frequency_penalty
         self.presence_penalty = presence_penalty
         openai.api_key = api_key
+        print(self.engine)
 
     def get_response(self, question):
-        response = openai.Completion.create(
-            engine=self.engine,
-            prompt=f"User: {question}\n{self.name}:",
+
+        if self.engine == "gpt-3.5-turbo":
+            completion = openai.ChatCompletion.create(
+            model=self.engine,
+            messages=[{"role": "user", "content": question}],
             temperature=self.temperature,
             max_tokens=self.max_tokens,
+            stop=self.stop,
             top_p=self.top_p,
             frequency_penalty=self.frequency_penalty,
             presence_penalty=self.presence_penalty
-        )
+            )
+            response = (completion.choices[0].message["content"])
 
-        return response.choices[0].text.strip()
+        else:
+            completion = openai.Completion.create(
+                engine=self.engine,
+                prompt=f"User: {question}\n{self.name}:",
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                stop=self.stop,
+                top_p=self.top_p,
+                frequency_penalty=self.frequency_penalty,
+                presence_penalty=self.presence_penalty
+            )
+            response = completion.choices[0].text.strip()
+
+        return response

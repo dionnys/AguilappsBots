@@ -1,3 +1,6 @@
 .env
 .env.access_token
 env
+ngrok.yml
+__pycache__
+__init__.py

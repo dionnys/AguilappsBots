@@ -31,6 +31,18 @@ class MongoDBConnection:
         collection = cls.connect()[collection_name]
         cursor = collection.find(query, projection).limit(limit)
         results = []
+        for document in cursor:
+            results.append(document)
+        return results
+
+    @classmethod
+    def find_all_documents(cls, collection_name, query=None, sort_by=None, sort_direction=1, projection=None, limit=0):
+        collection = cls.connect()[collection_name]
+        if sort_by:
+            cursor = collection.find(query, projection).sort(sort_by, sort_direction).limit(limit)
+        else:
+            cursor = collection.find(query, projection).limit(limit)
+        results = []
         time.sleep(2)
         for document in cursor:
             results.append(document)
@@ -56,9 +68,6 @@ class MongoDBConnection:
         try:
             collection = cls.connect()[collection_name]
             result = collection.update_one(query, update)
-            time.sleep(2)
-
-            #print(f"Se actualizó un documento en collection: {collection_name} en  {result.modified_count}")
             return result.modified_count
         except pymongo.errors.PyMongoError as e:
             print(f"Error al actualizar el documento: {e}")
@@ -67,8 +76,6 @@ class MongoDBConnection:
         try:
             collection = cls.connect()[collection_name]
             result = collection.delete_one(query)
-            time.sleep(2)
-            #print(f"Se eliminó un documento en collection: {collection_name} en {result.deleted_count}")
             return result.deleted_count
         except pymongo.errors.PyMongoError as e:
             print(f"Error al eliminar el documento: {e}")
@@ -80,8 +87,7 @@ class MongoDBConnection:
             db = collection = cls.connect()[collection_name]
             collection = db[collection_name]
             result = collection.replace_one(query, new_document)
-            time.sleep(2)
-            #print(f"Se reemplazó el documento en collection: {collection_name} con ID: {result.upserted_id}")
+
             return result.upserted_id is not None
         except pymongo.errors.PyMongoError as e:
             print(f"Error al reemplazar el documento: {e}")
