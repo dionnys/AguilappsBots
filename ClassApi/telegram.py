@@ -44,14 +44,14 @@ class TelegramBot:
         self.messagedefault = self.db_connection.find_one_documents("messagedefault", {"applications": "telegram"})
 
 
-        # Check if there is an existing conversation for the user
+        # Verificar si hay una conversación existente para el usuario
         if user_id not in self.user_conversations:
             self.user_conversations[user_id] = []
 
-        # Add user's message to the conversation
+        # Añadir el mensaje del usuario a la conversación
         self.user_conversations[user_id].append(f"User: {received_text}")
 
-        # Build the conversation prompt
+         # Construir la cadena de conversación
         conversation_history = "\n".join(self.user_conversations[user_id]) + "\nChatGPT:"
 
 
@@ -82,14 +82,14 @@ class TelegramBot:
             }
             self.db_connection.insert_one("users", user_data)
 
-        # Map commands to functions
+        # Mapea comandos a funciones.
         command_functions = {
             '/hola': self.activate_chatgpt,
             '/chao': self.deactivate_chatgpt
 
         }
 
-        # Get the function associated with the received command
+        # Obtener la función asociada al comando recibido.
         command_function = command_functions.get(received_text)
 
         if command_function:
@@ -102,6 +102,15 @@ class TelegramBot:
             await self.typing_indicator(user_id)
             #Obtener respuesta de OpenAI
             response = self.openai_instance.get_response(conversation_history)
+
+        # Verificar si el mensaje contiene una palabra o frase de activación para generar una imagen
+        if "/imagen" in received_text:
+            # Llame al método generate_image de la instancia de OpenAI
+            await self.typing_indicator(user_id)
+            image_url = self.openai_instance.generate_image(conversation_history)
+            # Espere a que se genere la imagen y luego envíela como respuesta al usuario
+            await self.typing_indicator(user_id)
+            await message.answer_photo(photo=image_url)
         else:
             print('ChatGPT desactivado.', user_id)
             if received_text == "/task":

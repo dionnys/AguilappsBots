@@ -1,5 +1,4 @@
 .env
-.env.access_token
 env
 ngrok.yml
 __pycache__
